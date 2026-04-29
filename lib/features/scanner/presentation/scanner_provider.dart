@@ -8,13 +8,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:uuid/uuid.dart';
 import '../data/ocr_service.dart';
 import '../data/invoice_parser.dart';
+import '../domain/scan_settings.dart';
 import '../domain/entities/invoice_entity.dart';
-
-/// 全域提供的 scannerProvider 狀態管理者
-final scannerProvider = StateNotifierProvider<ScannerNotifier, ScannerState>((ref) {
-  // 將 OcrService 注入至 Notifier 以利解耦
-  return ScannerNotifier(OcrService());
-});
 
 /// 掃描頁面的狀態封裝類別
 class ScannerState {
@@ -34,12 +29,25 @@ class ScannerState {
   }
 }
 
+/// 全域提供的 scannerProvider 狀態管理者
+final scannerProvider = NotifierProvider<ScannerNotifier, ScannerState>(
+  ScannerNotifier.new,
+);
+
+/// 掃描前處理設定的狀態管理者
+final scannerSettingsProvider = NotifierProvider<ScannerSettingsNotifier, ScanSettings>(
+  ScannerSettingsNotifier.new,
+);
+
 /// 掃描狀態變更的控制器 (Notifier)
-class ScannerNotifier extends StateNotifier<ScannerState> {
-  final OcrService _ocrService;
+class ScannerNotifier extends Notifier<ScannerState> {
+  final OcrService _ocrService = OcrService();
   final ImagePicker _picker = ImagePicker();
 
-  ScannerNotifier(this._ocrService) : super(ScannerState());
+  @override
+  ScannerState build() {
+    return ScannerState();
+  }
 
   /// 觸發從相簿中挑選照片來進行發票辦識
   Future<void> scanFromGallery() async {
@@ -102,5 +110,72 @@ class ScannerNotifier extends StateNotifier<ScannerState> {
   /// 清除掃描結果，重置回初始狀態
   void reset() {
     state = ScannerState();
+  }
+}
+
+class ScannerSettingsNotifier extends Notifier<ScanSettings> {
+  @override
+  ScanSettings build() {
+    return ScanPresets.balanced.safe;
+  }
+
+  void updateGrayscale(bool value) {
+    state = state.copyWith(grayscale: value).safe;
+  }
+
+  void updateDenoise(bool value) {
+    state = state.copyWith(denoise: value).safe;
+  }
+
+  void updateDenoiseMethod(DenoiseMethod method) {
+    state = state.copyWith(denoiseMethod: method).safe;
+  }
+
+  void updateDenoiseRadius(int radius) {
+    state = state.copyWith(denoiseRadius: radius).safe;
+  }
+
+  void updateDeskew(bool value) {
+    state = state.copyWith(deskew: value).safe;
+  }
+
+  void updatePerspective(bool value) {
+    state = state.copyWith(perspective: value).safe;
+  }
+
+  void updatePerspectivePaddingPercent(double value) {
+    state = state.copyWith(perspectivePaddingPercent: value).safe;
+  }
+
+  void updateEnhancement(bool value) {
+    state = state.copyWith(enhancement: value).safe;
+  }
+
+  void updateBinarize(bool value) {
+    state = state.copyWith(binarize: value).safe;
+  }
+
+  void updateThresholdMethod(ThresholdMethod method) {
+    state = state.copyWith(thresholdMethod: method).safe;
+  }
+
+  void updateAdaptiveBlockSize(int size) {
+    state = state.copyWith(adaptiveBlockSize: size).safe;
+  }
+
+  void updateAdaptiveOffset(int offset) {
+    state = state.copyWith(adaptiveOffset: offset).safe;
+  }
+
+  void updateMorphology(bool value) {
+    state = state.copyWith(morphology: value).safe;
+  }
+
+  void updateMorphologyRadius(int radius) {
+    state = state.copyWith(morphologyRadius: radius).safe;
+  }
+
+  void restoreSafeDefaults() {
+    state = ScanPresets.balanced.safe;
   }
 }

@@ -24,9 +24,11 @@ CREATE TABLE winning_numbers (
   prize_type VARCHAR(20) NOT NULL,
   number VARCHAR(20) NOT NULL,
   prize_amount INT NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_period_number (period, number)
 );
 
 INSERT INTO winning_numbers (period, prize_type, number, prize_amount) VALUES
-('11304', '特別獎', 'WR-73786487', 2000000),
+('11502', '特別獎', 'WR-73786487', 2000000),
+('11304', '特獎',   'AB-12345678', 200000),
 ('11304', '六獎',   'UW-15342109', 10000);

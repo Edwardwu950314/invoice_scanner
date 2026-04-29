@@ -1,0 +1,8 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^flutter build apk --debug$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}

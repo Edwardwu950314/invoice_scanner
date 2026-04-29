@@ -1,7 +1,21 @@
 /// 我的發票清單頁面 (Invoice List Page)
 /// 
-/// 顯示已儲存的所有發票紀錄清單，並統整總花費 (Total Expenses)。
-/// 支援下拉更新資料 (Pull-to-Refresh) 與刪除發票功能。
+/// 功能說明：
+/// 1. 展示所有已儲存的發票紀錄，按最新優先排序
+/// 2. 統計並顯示當月/總體花費
+/// 3. 支援下拉刷新（RefreshIndicator）
+/// 4. 支援刪除發票（同時刪除本地和後端）
+/// 5. 支援對獎功能（與中獎號碼進行比對）
+/// 6. 支援點擊進入發票編輯頁
+///
+/// 核心特性：
+/// - 使用 AsyncValue 處理非同步資料加載狀態（loading/data/error）
+/// - 用 Riverpod 的 refresh() 在刪除後重新加載清單
+/// - 設計模式：Card 元件 + 浮動按鈕 FAB
+///
+/// 導航流程：
+/// - 對獎: 呼叫 check.php API，顯示獎項或「未中獎」
+/// - 編輯: context.push() 進入 invoice_detail_page，返回時自動重新加載
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,53 +26,74 @@ import '../../scanner/domain/entities/invoice_entity.dart';
 import 'invoice_list_provider.dart';
 import '../widgets/invoice_card.dart';
 
+/// 發票清單頁面
+///
+/// 使用 ConsumerWidget（而非 ConsumerStatefulWidget）因為：
+/// - 不需要管理本地 Widget 狀態（如 TextEditingController）
+/// - 所有狀態都由 Riverpod provider 管理
 class InvoiceListPage extends ConsumerWidget {
   const InvoiceListPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // 取得當前發票清單的非同步狀態 (AsyncValue)
+    // ============ 監聽發票清單的非同步狀態 ============
+    // AsyncValue 是 Riverpod 提供的類型，用於表示非同步操作的三種狀態：
+    // - AsyncValue.loading: 正在加載中
+    // - AsyncValue.data: 加載成功，包含實際資料
+    // - AsyncValue.error: 加載失敗，包含異常訊息
     final listState = ref.watch(invoiceListProvider);
 
-    // 空監聽 (可用來確保依賴的 Provider 在特定情況下不被卸載或觸發副作用)
+    // ============ 空監聽（技巧用途） ============
+    // 確保當此頁面存在時，invoiceListProvider 不會被 GC 回收
+    // （若列表頁面被卸載，provider 的資料會被清除）
     ref.listen(invoiceListProvider, (previous, next) {});
 
     return Scaffold(
       appBar: CustomAppBar(
         title: '我的發票',
         actions: [
-          // 對獎按鈕
+          // ============ 對獎按鈕 ============
+          // 點擊後呼叫後端 check.php，核對本地所有發票是否中獎
           IconButton(
             tooltip: '對獎',
             icon: const Icon(Icons.emoji_events_rounded),
             onPressed: () => _checkWinners(context),
           ),
-          // 重新載入按鈕
+          
+          // ============ 重新加載按鈕 ============
+          // 手動觸發發票清單的重新加載（對應 API 重新查詢）
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
             onPressed: () {
-              ref.read(invoiceListProvider.notifier).loadInvoices();
+              ref.refresh(invoiceListProvider);
             },
           )
         ],
       ),
-      // 處理資料獲取的三種狀態: data(成功), loading(載入中), error(錯誤發生)
+      
+      // ============ 核心內容：根據非同步狀態分別渲染 ============
+      // AsyncValue.when() 是 Riverpod 提供的便利方法，自動處理三種狀態
       body: listState.when(
+        // ============ 成功狀態：資料已加載 ============
         data: (invoices) {
-          // 資料為空時顯示空狀態
+          // 若清單為空，顯示空狀態圖示和提示文字
           if (invoices.isEmpty) {
             return _buildEmptyState(context);
           }
-          // 有資料時顯示下拉更新元件與清單
+          
+          // 有資料時，提供下拉刷新功能
           return RefreshIndicator(
             onRefresh: () async {
-              await ref.read(invoiceListProvider.notifier).loadInvoices();
+              // 使用者下拉時觸發重新加載
+              await ref.refresh(invoiceListProvider);
             },
             child: Column(
               children: [
-                // 頂部的當前月份/歷史總計花費卡片
-                 _buildTotalExpenseCard(context, invoices),
-                // 發票紀錄列表
+                // ============ 頂部卡片：總花費統計 ============
+                // 計算當月或歷史的總支出金額
+                _buildTotalExpenseCard(context, invoices),
+                
+                // ============ 中間區域：發票紀錄列表 ============
                 Expanded(
                   child: ListView.separated(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -68,12 +103,15 @@ class InvoiceListPage extends ConsumerWidget {
                       final inv = invoices[index];
                       return InvoiceCard(
                         invoice: inv,
-                        // 點擊卡片時跳轉至明細頁 (並帶入既有的發票內容實體)
+                        // ============ 卡片點擊事件 ============
+                        // 導航到發票編輯頁，並在返回時自動重新加載清單
                         onTap: () async {
                           await context.push('/invoice/${inv.id}', extra: inv);
-                          ref.read(invoiceListProvider.notifier).loadInvoices();
+                          // 返回後重新加載清單，確保顯示最新的修改
+                          ref.refresh(invoiceListProvider);
                         },
-                        // 要求刪除的回調
+                        // ============ 刪除按鈕事件 ============
+                        // 觸發確認對話框，使用者確認後刪除發票
                         onDelete: () => _confirmDelete(context, ref, inv),
                       );
                     },
@@ -201,9 +239,9 @@ class InvoiceListPage extends ConsumerWidget {
       if (navigator.canPop()) navigator.pop(); // 關掉 loading
       if (!context.mounted) return;
 
-      final int count = (result['count'] as int?) ?? 0;
-      final int total = (result['total_prize'] as int?) ?? 0;
-      final List winners = (result['winners'] as List?) ?? [];
+      final int count = (result['winning_count'] as int?) ?? (result['count'] as int?) ?? 0;
+      final int total = (result['total_prize_amount'] as int?) ?? (result['total_prize'] as int?) ?? 0;
+      final List winners = (result['winning_invoices'] as List?) ?? (result['winners'] as List?) ?? [];
 
       showDialog(
         context: context,
@@ -286,7 +324,12 @@ class InvoiceListPage extends ConsumerWidget {
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade50),
             onPressed: () {
               // 確認刪除後，呼叫 provider 中的 deleteInvoice
-              ref.read(invoiceListProvider.notifier).deleteInvoice(inv.id, invoiceNumber: inv.invoiceNumber);
+              final period = ApiService.periodFromDate(inv.date ?? inv.scannedAt);
+              ref.read(invoiceListProvider.notifier).deleteInvoice(
+                inv.id,
+                invoiceNumber: inv.invoiceNumber,
+                period: period,
+              );
               Navigator.pop(c);
             },
             child: Text('刪除', style: TextStyle(color: Colors.red.shade600, fontWeight: FontWeight.bold)),

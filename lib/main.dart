@@ -11,6 +11,8 @@ import 'core/theme/app_theme.dart';
 import 'features/invoice_list/presentation/invoice_list_page.dart';
 import 'features/main/presentation/main_screen.dart';
 import 'features/scanner/presentation/scanner_page.dart';
+import 'features/scanner/presentation/scanner_settings_page.dart';
+import 'features/scanner/presentation/winning_numbers_admin_page.dart';
 import 'features/invoice_detail/presentation/invoice_detail_page.dart';
 import 'features/scanner/domain/entities/invoice_entity.dart';
 
@@ -55,10 +57,13 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             routes: [
               GoRoute(
                 path: '/settings',
-                builder: (context, state) => Scaffold(
-                  appBar: AppBar(title: const Text('設定')),
-                  body: const Center(child: Text('此分頁為擴充預留')),
-                ),
+                builder: (context, state) => const ScannerSettingsPage(),
+                routes: [
+                  GoRoute(
+                    path: 'winning-admin',
+                    builder: (context, state) => const WinningNumbersAdminPage(),
+                  ),
+                ],
               ),
             ],
           ),

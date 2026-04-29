@@ -12,15 +12,15 @@ import '../../../services/api_service.dart';
 final localStorageServiceProvider = Provider((ref) => LocalStorageService());
 
 /// 使用 .family 建構子，因為每一個明細頁面都有各自對應的 InvoiceEntity 初始狀態
-final invoiceDetailProvider = StateNotifierProvider.family<InvoiceDetailNotifier, InvoiceEntity, InvoiceEntity>((ref, initialInvoice) {
-  final storage = ref.watch(localStorageServiceProvider);
-  return InvoiceDetailNotifier(initialInvoice, storage);
-});
+final invoiceDetailProvider = NotifierProvider.family<InvoiceDetailNotifier, InvoiceEntity, InvoiceEntity>(
+  InvoiceDetailNotifier.new,
+);
 
-class InvoiceDetailNotifier extends StateNotifier<InvoiceEntity> {
-  final LocalStorageService _storage;
-
-  InvoiceDetailNotifier(super.initialInvoice, this._storage);
+class InvoiceDetailNotifier extends FamilyNotifier<InvoiceEntity, InvoiceEntity> {
+  @override
+  InvoiceEntity build(InvoiceEntity initialInvoice) {
+    return initialInvoice;
+  }
 
   /// 當使用者在明細頁面的任何文字框編輯時，呼叫此函式更新單筆狀態 (Immutable)
   void updateField({
@@ -40,14 +40,15 @@ class InvoiceDetailNotifier extends StateNotifier<InvoiceEntity> {
 
   /// 將當前最新的修正狀態寫入檔案系統與本地資料庫
   Future<void> save() async {
+    final storage = ref.watch(localStorageServiceProvider);
     // 確保持久保存發票被拍下時的圖片，將其由暫存區(tmp)複製至 App 文件目錄中
-    final savedImagePath = await _storage.copyImageToAppDirectory(state.imageLocalPath, state.id);
+    final savedImagePath = await storage.copyImageToAppDirectory(state.imageLocalPath, state.id);
     
     // 更新 Entity 使其指向永久儲存路徑
     final entityToSave = state.copyWith(imageLocalPath: savedImagePath);
     
     // 呼叫底層儲存服務覆寫或新增該筆發票
-    await _storage.saveInvoice(entityToSave);
+    await storage.saveInvoice(entityToSave);
 
     // 同步推送到後端資料庫 (Plan B: 本地 + 後端雙寫)
     // 失敗不影響本地儲存,只記錄錯誤,這樣離線也能用

@@ -1,8 +1,18 @@
 /// 發票明細與編輯頁面 (Invoice Detail Page)
 /// 
-/// 提供單張發票的詳細資訊展示，包含影像預覽與 OCR 原始擷取文字。
-/// 開放讓使用者可以針對辨識錯誤的欄位進行手動修正 (號碼、日期、金額、店家)，
-/// 並支援點擊右上角勾選按鈕將修改儲存進本地資料庫。
+/// 功能說明：
+/// 1. 展示單筆發票的完整資訊（包含掃描圖片）
+/// 2. 允許使用者編輯四個主要欄位（號碼、店家、金額、日期）
+/// 3. 提供儲存按鈕，將修改寫入本地資料庫與後端
+/// 4. 支援 OCR 原文查看（用於驗證辨識結果）
+///
+/// 使用場景：
+/// - 掃描完成後自動跳入此頁（isNew = true），用於確認和編輯
+/// - 從清單點擊發票卡片進入（isNew = false），用於檢視和修改
+///
+/// 狀態管理：
+/// - 使用 Riverpod 的 NotifierProvider.family，因為每筆發票有不同的初始資料
+/// - 本地文字框狀態（TextEditingController）與 provider 狀態分開管理
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,11 +23,18 @@ import '../../../shared/widgets/custom_app_bar.dart';
 import '../../scanner/domain/entities/invoice_entity.dart';
 import 'invoice_detail_provider.dart';
 
-/// ConsumerStatefulWidget 用於需管理本身輸入框狀態，並結合 Riverpod
+/// 發票明細編輯頁
+///
+/// 使用 ConsumerStatefulWidget 因為需要：
+/// 1. 管理 TextEditingController（本地狀態）
+/// 2. 整合 Riverpod provider（全域狀態）
 class InvoiceDetailPage extends ConsumerStatefulWidget {
-  /// 傳進來的初始發票實體 (可能剛掃描完，或從清單點進來)
+  /// 要編輯的發票實體（可能剛掃描完，或從清單點進來）
   final InvoiceEntity invoice;
-  /// 是否為全新掃描的發票 (控制標題顯示「確認發票內容」或「發票明細」)
+  
+  /// 是否為全新掃描的發票
+  /// true: 標題為「確認發票內容」，強調確認而非編輯
+  /// false: 標題為「發票明細」，強調檢視和修改
   final bool isNew;
 
   const InvoiceDetailPage({super.key, required this.invoice, this.isNew = false});
@@ -26,29 +43,45 @@ class InvoiceDetailPage extends ConsumerStatefulWidget {
   ConsumerState<InvoiceDetailPage> createState() => _InvoiceDetailPageState();
 }
 
+/// 發票明細頁面的狀態類別
+///
+/// 職責：
+/// - 初始化和管理四個文字輸入框的控制器
+/// - 監聽使用者的編輯輸入
+/// - 協調本地狀態與 Riverpod provider 狀態
+/// - 處理儲存邏輯（包括對話框、導航等）
 class _InvoiceDetailPageState extends ConsumerState<InvoiceDetailPage> {
-  // 分別為發票的四個欄位建立文字輸入控制器
+  // ============ 文字輸入框控制器 ============
+  /// 發票號碼輸入框（如 WR-73786487）
   late TextEditingController _numberController;
+  
+  /// 店家名稱輸入框
   late TextEditingController _merchantController;
+  
+  /// 發票金額輸入框（存儲為字串，儲存時會轉為 double）
   late TextEditingController _amountController;
+  
+  /// 發票日期輸入框（格式：YYYY-MM-DD）
   late TextEditingController _dateController;
 
   @override
   void initState() {
     super.initState();
-    // 將傳入實體的資料賦值給控制器，使其顯示在對應的欄位上
+    // ============ 從傳入的發票實體初始化文字框 ============
+    // 使用 late 延遲初始化，因為需要存取 widget.invoice
     _numberController = TextEditingController(text: widget.invoice.invoiceNumber ?? '');
     _merchantController = TextEditingController(text: widget.invoice.merchantName ?? '');
     _amountController = TextEditingController(text: widget.invoice.totalAmount?.toString() ?? '');
     _dateController = TextEditingController(
-      // 將 DateTime 格式化為字串
+      // 使用日期工具函數格式化（通常為 YYYY-MM-DD）
       text: widget.invoice.date != null ? DateUtilsHelper.formatDate(widget.invoice.date!) : '',
     );
   }
 
   @override
   void dispose() {
-    // 釋放記憶體
+    // ============ 頁面卸載時釋放文字框資源 ============
+    // 避免記憶體洩漏
     _numberController.dispose();
     _merchantController.dispose();
     _amountController.dispose();
@@ -58,7 +91,9 @@ class _InvoiceDetailPageState extends ConsumerState<InvoiceDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    // 建立並監聽該特定發票實體的 provider
+    // ============ 建立並監聽該發票的 provider ============
+    // NotifierProvider.family 允許根據發票實體建立獨立的狀態容器
+    // 這樣可以同時開啟多個發票編輯頁面且各自獨立
     final provider = invoiceDetailProvider(widget.invoice);
     final state = ref.watch(provider);
 
@@ -66,29 +101,35 @@ class _InvoiceDetailPageState extends ConsumerState<InvoiceDetailPage> {
       appBar: CustomAppBar(
         title: widget.isNew ? '確認發票內容' : '發票明細',
         actions: [
-          // 儲存修改的按鈕 (右上角勾號)
+          // ============ 右上角儲存按鈕 ============
+          // 點擊後觸發複雜的儲存流程：驗證→更新→顯示加載彈窗→保存→導航
           IconButton(
             icon: const Icon(Icons.check_circle_rounded),
             tooltip: '儲存',
             onPressed: () async {
-              // 1. 嘗試將字串安全轉型回 double
+              // ============ 步驟 1：驗證與類型轉換 ============
+              // 嘗試將字串轉為 double（金額欄位）
               double? amount;
               if (_amountController.text.isNotEmpty) {
                  amount = double.tryParse(_amountController.text);
               }
 
-              // 2. 嘗試將字串 YYYY-MM-DD 安全轉換為 DateTime
+              // ============ 步驟 2：驗證與類型轉換 ============
+              // 嘗試將字串 YYYY-MM-DD 轉為 DateTime
               DateTime? date;
               if (_dateController.text.isNotEmpty) {
                  try {
+                   // 手動解析日期字串 (YYYY-MM-DD 格式)
                    final parts = _dateController.text.split('-');
                    if (parts.length == 3) {
                      date = DateTime(int.parse(parts[0]), int.parse(parts[1]), int.parse(parts[2]));
                    }
-                 } catch (_) {}
+                 } catch (_) {} // 解析失敗則保持 null
               }
 
-              // 3. 呼叫 notifier 批次更新欄位
+              // ============ 步驟 3：批量更新 provider 狀態 ============
+              // 只有變更的欄位才會被更新，其他欄位保持原值
+              // (updateField 內部使用 copyWith 實現不可變更新)
               ref.read(provider.notifier).updateField(
                 invoiceNumber: _numberController.text,
                 merchantName: _merchantController.text,
@@ -96,11 +137,14 @@ class _InvoiceDetailPageState extends ConsumerState<InvoiceDetailPage> {
                 date: date,
               );
 
-              // 4. 先抓住 navigator 跟 router (避免 await 後 context 失效或 navigator 鎖定)
+              // ============ 步驟 4：提前獲取 navigator 和 router ============
+              // 原因：await 後可能導致 context 失效或 navigator 被鎖定
+              // 提前取得參照避免後續邏輯失敗
               final navigator = Navigator.of(context, rootNavigator: true);
               final router = GoRouter.of(context);
 
-              // 5. 顯示全螢幕半透明等待彈窗
+              // ============ 步驟 5：顯示加載中的全螢幕對話框 ============
+              // 防止使用者在儲存期間離開頁面或重複點擊按鈕
               showDialog(
                 context: context,
                 barrierDismissible: false,

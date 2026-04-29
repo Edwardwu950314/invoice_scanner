@@ -19,9 +19,9 @@ class AppTheme {
       
       // 核心色彩計畫配置
       colorScheme: ColorScheme.fromSeed(
-        seedColor: const Color(0xFF4F46E5),  // 基礎種子色 (靛青色)
-        primary: const Color(0xFF4F46E5),    // 主要顏色 (按鈕、強調元件)
-        secondary: const Color(0xFF10B981),  // 次要顏色 (薄荷綠，用於成功、總計等)
+        seedColor: const Color(0xFF1D4ED8),  // 基礎種子色 (深藍色)
+        primary: const Color(0xFF1D4ED8),    // 主要顏色 (按鈕、強調元件)
+        secondary: const Color(0xFF60A5FA),  // 次要顏色 (淺藍色，用於輔助強調)
         surface: Colors.white,               // 表面元件背景色 (卡片、對話框)
         brightness: Brightness.light,        // 定義為淺色模式
       ),
@@ -33,7 +33,7 @@ class AppTheme {
       appBarTheme: const AppBarTheme(
         centerTitle: true,
         elevation: 0,
-        backgroundColor: Color(0xFF4F46E5),
+        backgroundColor: Color(0xFF1D4ED8),
         foregroundColor: Colors.white, // 文字與 Icon 的顏色
       ),
       
@@ -55,7 +55,7 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
-          side: const BorderSide(color: Color(0xFF4F46E5), width: 1.5),
+          side: const BorderSide(color: Color(0xFF1D4ED8), width: 1.5),
         ),
       ),
       
@@ -77,7 +77,7 @@ class AppTheme {
         // 聚焦時的邊框樣式 (使用主要顏色)
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: Color(0xFF4F46E5), width: 2),
+          borderSide: const BorderSide(color: Color(0xFF1D4ED8), width: 2),
         ),
       ),
     );
