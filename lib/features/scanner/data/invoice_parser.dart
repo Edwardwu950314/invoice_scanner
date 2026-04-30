@@ -77,8 +77,8 @@ class InvoiceParser {
     }
 
     // 3. 解析發票日期 (Date)
-    // 支援格式：YYYY-MM-DD, YYYY/MM/DD, YYYY.MM.DD
-    final dateRegex = RegExp(r'(\d{4})[./-](\d{2})[./-](\d{2})');
+    // 支援格式：YYYY-MM-DD, YYYY/MM/DD, YYYY.MM.DD, YYYY MM-DD
+    final dateRegex = RegExp(r'(\d{4})[./\s-](\d{2})[./\s-](\d{2})');
     final dateMatch = dateRegex.firstMatch(ocrText);
     if (dateMatch != null) {
       try {
@@ -93,7 +93,7 @@ class InvoiceParser {
 
     // 4. 解析消費金額 (Amount)
     // 尋找「合計」、「總計」、「NT$」或「$」後方跟著的數字字串 (可能含有千分位逗號)
-    final amountRegex = RegExp(r'(?:合計|總計|NT\$|\$)\s*:?\s*(\d+(?:,\d+)*(?:\.\d+)?)');
+    final amountRegex = RegExp(r'(?:合計|總計|總|計|NT\$|\$)\s*:?\s*(\d+(?:,\d+)*(?:\.\d+)?)');
     final amtMatch = amountRegex.firstMatch(ocrText);
     if (amtMatch != null) {
       try {
