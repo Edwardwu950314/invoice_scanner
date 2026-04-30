@@ -31,6 +31,9 @@ class InvoiceEntity {
   
   /// 用戶是否有在明細頁面中手動編輯過這張發票的紀錄
   final bool isManuallyEdited;
+  
+  /// 是否與已存檔的發票號碼重複 (用於掃描時檢測)
+  final bool isDuplicate;
 
   InvoiceEntity({
     required this.id,
@@ -42,6 +45,7 @@ class InvoiceEntity {
     this.totalAmount,
     required this.rawOcrText,
     this.isManuallyEdited = false,
+    this.isDuplicate = false,
   });
 
   /// 從 JSON 格式字典反序列化為 InvoiceEntity 實體
@@ -57,8 +61,7 @@ class InvoiceEntity {
       // 確保轉型安全，將 num 轉為 double
       totalAmount: (json['totalAmount'] as num?)?.toDouble(),
       rawOcrText: json['rawOcrText'] as String,
-      isManuallyEdited: json['isManuallyEdited'] as bool? ?? false,
-    );
+      isManuallyEdited: json['isManuallyEdited'] as bool? ?? false,      isDuplicate: json['isDuplicate'] as bool? ?? false,    );
   }
 
   /// 將 InvoiceEntity 實體序列化為 JSON 變數字典，以便存入本地資料庫
@@ -73,6 +76,7 @@ class InvoiceEntity {
       'totalAmount': totalAmount,
       'rawOcrText': rawOcrText,
       'isManuallyEdited': isManuallyEdited,
+      'isDuplicate': isDuplicate,
     };
   }
 
@@ -87,6 +91,7 @@ class InvoiceEntity {
     double? totalAmount,
     String? rawOcrText,
     bool? isManuallyEdited,
+    bool? isDuplicate,
   }) {
     return InvoiceEntity(
       id: id ?? this.id,
@@ -98,6 +103,7 @@ class InvoiceEntity {
       totalAmount: totalAmount ?? this.totalAmount,
       rawOcrText: rawOcrText ?? this.rawOcrText,
       isManuallyEdited: isManuallyEdited ?? this.isManuallyEdited,
+      isDuplicate: isDuplicate ?? this.isDuplicate,
     );
   }
 }

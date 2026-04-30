@@ -10,6 +10,7 @@ import '../data/ocr_service.dart';
 import '../data/invoice_parser.dart';
 import '../domain/scan_settings.dart';
 import '../domain/entities/invoice_entity.dart';
+import '../../../shared/services/local_storage_service.dart';
 
 /// 掃描頁面的狀態封裝類別
 class ScannerState {
@@ -87,7 +88,17 @@ class ScannerNotifier extends Notifier<ScannerState> {
       // 3. 將辨識出來的原始文字送交 Parser (正規表達式) 萃取欄位
       final parsedData = InvoiceParser.parse(rawText);
 
-      // 4. 建立暫時的 InvoiceEntity 實體 (供明細頁檢視修正使用)
+      // 4. 檢查是否與已存檔的發票重複 (比對發票號碼)
+      bool isDuplicate = false;
+      if (parsedData.invoiceNumber != null && parsedData.invoiceNumber!.isNotEmpty) {
+        final storage = LocalStorageService();
+        final existingInvoices = await storage.readInvoices();
+        isDuplicate = existingInvoices.any(
+          (invoice) => invoice.invoiceNumber == parsedData.invoiceNumber,
+        );
+      }
+
+      // 5. 建立暫時的 InvoiceEntity 實體 (供明細頁檢視修正使用)
       final entity = InvoiceEntity(
         id: const Uuid().v4(),          // 賦予隨機唯一的 ID
         scannedAt: DateTime.now(),
@@ -97,9 +108,10 @@ class ScannerNotifier extends Notifier<ScannerState> {
         merchantName: parsedData.merchantName,
         totalAmount: parsedData.amount,
         rawOcrText: rawText,
+        isDuplicate: isDuplicate,       // 標記是否重複
       );
 
-      // 5. 更新狀態，將辨識結果送到畫面上 (觸發導覽至明細頁)
+      // 6. 更新狀態，將辨識結果送到畫面上 (觸發導覽至明細頁)
       state = state.copyWith(isLoading: false, result: entity);
 
     } catch (e) {

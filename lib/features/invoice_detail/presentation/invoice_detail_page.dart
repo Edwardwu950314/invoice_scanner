@@ -179,6 +179,34 @@ class _InvoiceDetailPageState extends ConsumerState<InvoiceDetailPage> {
       body: SingleChildScrollView(
         child: Column(
           children: [
+            // 重複發票警告提示
+            if (state.isDuplicate)
+              Container(
+                margin: const EdgeInsets.all(16),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.orange[50],
+                  border: Border.all(color: Colors.orange[300]!, width: 1.5),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.warning_rounded, color: Colors.orange[700], size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        '這張發票已經儲存過了',
+                        style: TextStyle(
+                          color: Colors.orange[900],
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            
             // 如果此發票附有在本機的照片檔案路徑，顯示圖片供對照
             if (state.imageLocalPath.isNotEmpty)
               Container(
