@@ -20,6 +20,10 @@
  * - number (varchar): 中獎號碼（自動轉為大寫）
  * - prize_amount (int): 獎金金額（新台幣）
  * - created_at (timestamp): 建立時間（自動設為當前時間）
+ *
+ * 備註：
+ * - 本檔案依賴 db.php 提供的 $pdo 連線
+ * - 若要擴充權限驗證，可在 switch 前加入 token/session 驗證
  */
 
 // ============ CORS 與內容協商設置 ============

@@ -4,6 +4,10 @@
  *
  * 放在 XAMPP htdocs 的 invoice_scanner 目錄下後，可直接用瀏覽器開啟：
  * http://localhost/invoice_scanner/admin.php
+ *
+ * 備註：
+ * - 此頁面本身不直接操作資料庫
+ * - 所有資料異動都透過同目錄的 winning.php API 完成
  */
 ?>
 <!DOCTYPE html>
@@ -376,7 +380,7 @@
   </style>
 </head>
 <body>
-  <!-- Edit Modal -->
+  <!-- 編輯彈窗：用於修改既有中獎號碼記錄 -->
   <div id="editModal" class="modal-overlay">
     <div class="modal-dialog">
       <div class="modal-header">

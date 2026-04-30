@@ -21,6 +21,10 @@
  * - image_path (varchar): 發票圖片路徑（存儲在 App 本地或後端）
  * - created_at (timestamp): 建立時間
  * - updated_at (timestamp): 最後更新時間
+ *
+ * 備註：
+ * - 本檔案依賴 db.php 提供的 $pdo 連線
+ * - 所有 SQL 均使用 Prepared Statement，降低 SQL Injection 風險
  */
 
 // ============ CORS 與內容協商設置 ============
