@@ -96,6 +96,7 @@ class _InvoiceDetailPageState extends ConsumerState<InvoiceDetailPage> {
     // 這樣可以同時開啟多個發票編輯頁面且各自獨立
     final provider = invoiceDetailProvider(widget.invoice);
     final state = ref.watch(provider);
+    final isDuplicate = state.isDuplicate;
 
     return Scaffold(
       appBar: CustomAppBar(
@@ -106,7 +107,9 @@ class _InvoiceDetailPageState extends ConsumerState<InvoiceDetailPage> {
           IconButton(
             icon: const Icon(Icons.check_circle_rounded),
             tooltip: '儲存',
-            onPressed: () async {
+            onPressed: isDuplicate
+                ? null
+                : () async {
               // ============ 步驟 1：驗證與類型轉換 ============
               // 嘗試將字串轉為 double（金額欄位）
               double? amount;
@@ -180,7 +183,7 @@ class _InvoiceDetailPageState extends ConsumerState<InvoiceDetailPage> {
         child: Column(
           children: [
             // 重複發票警告提示
-            if (state.isDuplicate)
+            if (isDuplicate)
               Container(
                 margin: const EdgeInsets.all(16),
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -195,7 +198,7 @@ class _InvoiceDetailPageState extends ConsumerState<InvoiceDetailPage> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        '這張發票已經儲存過了',
+                        '這張發票已經儲存過了，無法再次修改或儲存',
                         style: TextStyle(
                           color: Colors.orange[900],
                           fontWeight: FontWeight.w600,
@@ -263,6 +266,7 @@ class _InvoiceDetailPageState extends ConsumerState<InvoiceDetailPage> {
                   // 發票號碼輸入框
                   TextField(
                     controller: _numberController,
+                    readOnly: isDuplicate,
                     decoration: const InputDecoration(
                       labelText: '發票號碼',
                       prefixIcon: Icon(Icons.numbers_rounded),
@@ -272,6 +276,7 @@ class _InvoiceDetailPageState extends ConsumerState<InvoiceDetailPage> {
                   // 日期輸入框
                   TextField(
                     controller: _dateController,
+                    readOnly: isDuplicate,
                     decoration: const InputDecoration(
                       labelText: '發票日期 (YYYY-MM-DD)',
                       prefixIcon: Icon(Icons.date_range_rounded),
@@ -281,6 +286,7 @@ class _InvoiceDetailPageState extends ConsumerState<InvoiceDetailPage> {
                   // 店家名稱輸入框
                   TextField(
                     controller: _merchantController,
+                    readOnly: isDuplicate,
                     decoration: const InputDecoration(
                       labelText: '店家名稱',
                       prefixIcon: Icon(Icons.storefront_rounded),
@@ -290,6 +296,7 @@ class _InvoiceDetailPageState extends ConsumerState<InvoiceDetailPage> {
                   // 消費總額輸入框 (限定數字鍵盤)
                   TextField(
                     controller: _amountController,
+                    readOnly: isDuplicate,
                     keyboardType: TextInputType.number,
                     decoration: const InputDecoration(
                       labelText: '消費金額',

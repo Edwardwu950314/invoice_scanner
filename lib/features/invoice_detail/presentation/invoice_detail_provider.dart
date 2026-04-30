@@ -40,6 +40,10 @@ class InvoiceDetailNotifier extends FamilyNotifier<InvoiceEntity, InvoiceEntity>
 
   /// 將當前最新的修正狀態寫入檔案系統與本地資料庫
   Future<void> save() async {
+    if (state.isDuplicate) {
+      throw StateError('這張發票已經儲存過了，無法再次儲存');
+    }
+
     final storage = ref.watch(localStorageServiceProvider);
     // 確保持久保存發票被拍下時的圖片，將其由暫存區(tmp)複製至 App 文件目錄中
     final savedImagePath = await storage.copyImageToAppDirectory(state.imageLocalPath, state.id);
